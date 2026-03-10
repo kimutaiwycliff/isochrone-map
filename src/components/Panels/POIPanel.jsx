@@ -6,14 +6,19 @@ import { ORIGIN_COLORS } from '../../utils/colors'
 import { HAS_API_KEY } from '../../utils/ors'
 import { cn } from '../../lib/utils'
 
+// ORS valid category_ids (max 5 per request).
+// IDs sourced from the ORS POI API's accepted list.
 const CATEGORIES = [
-  { id: 100, label: 'Food & Drink', icon: Coffee, color: 'amber', ids: [101,102,103,104,105] },
-  { id: 200, label: 'Health',       icon: Heart,         color: 'red',   ids: [201,202,203,204] },
-  { id: 300, label: 'Transport',    icon: Bus,           color: 'sky',   ids: [301,302,303] },
-  { id: 400, label: 'Finance',      icon: DollarSign,    color: 'green', ids: [401,402] },
-  { id: 500, label: 'Education',    icon: GraduationCap, color: 'purple',ids: [501,502,503] },
-  { id: 600, label: 'Culture',      icon: Landmark,      color: 'pink',  ids: [601,602,603] },
+  { id: 100, label: 'Food & Drink', icon: Coffee,       color: 'amber',  ids: [560, 561, 562, 563] },
+  { id: 200, label: 'Health',       icon: Heart,        color: 'red',    ids: [101, 102, 103, 104] },
+  { id: 300, label: 'Transport',    icon: Bus,           color: 'sky',    ids: [261, 262, 263, 264] },
+  { id: 400, label: 'Finance',      icon: DollarSign,   color: 'green',  ids: [121, 122, 123, 124] },
+  { id: 500, label: 'Education',    icon: GraduationCap, color: 'purple', ids: [207, 208, 209, 210] },
+  { id: 600, label: 'Culture',      icon: Landmark,     color: 'pink',   ids: [621, 622, 623, 624] },
 ]
+
+// ORS hard limit: max 5 category_ids per request
+const ORS_MAX_CATEGORY_IDS = 5
 
 const CAT_COLORS = {
   amber:  'bg-amber-500/15 text-amber-400 border-amber-500/30',
@@ -57,16 +62,20 @@ export default function POIPanel() {
     )
   }
 
+  // Total IDs that would be sent for the current selection
+  const projectedIds = selectedCats.flatMap(
+    (id) => CATEGORIES.find((c) => c.id === id)?.ids ?? []
+  )
+  const overLimit = projectedIds.length > ORS_MAX_CATEGORY_IDS
+
   const runPOI = () => {
     const origin = origins.find((o) => o.id === activeOriginId)
     const iso = isochroneData[activeOriginId]
     if (!origin || !iso) return
-    // Use outermost isochrone polygon
     const outerFeature = iso.features?.[iso.features.length - 1]
     if (!outerFeature) return
-    const categoryIds = selectedCats.flatMap(
-      (id) => CATEGORIES.find((c) => c.id === id)?.ids ?? []
-    )
+    // Enforce ORS hard limit of 5 category_ids
+    const categoryIds = projectedIds.slice(0, ORS_MAX_CATEGORY_IDS)
     mutate({ geojson: outerFeature.geometry, categoryIds })
   }
 
@@ -136,6 +145,13 @@ export default function POIPanel() {
           })}
         </div>
       </div>
+
+      {/* Over-limit warning */}
+      {overLimit && (
+        <p className="text-[11px] text-amber-400/80 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+          ORS allows max 5 category IDs per request. Only the first selected category will be used — deselect one to search both.
+        </p>
+      )}
 
       {/* Fetch button */}
       <button
