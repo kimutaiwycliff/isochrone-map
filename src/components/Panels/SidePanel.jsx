@@ -1,4 +1,4 @@
-import { Map, BarChart3, Bookmark, Navigation, X } from 'lucide-react'
+import { Map, BarChart3, Bookmark, Navigation, Grid3x3, Star, Route, X } from 'lucide-react'
 import { useIsochroneStore } from '../../store/isochroneStore'
 import SearchBox from '../Controls/SearchBox'
 import ModeSelector from '../Controls/ModeSelector'
@@ -8,13 +8,19 @@ import OriginList from '../Controls/OriginList'
 import StatsPanel from './StatsPanel'
 import SavedPlaces from './SavedPlaces'
 import RouteDetails from './RouteDetails'
+import MatrixPanel from './MatrixPanel'
+import POIPanel from './POIPanel'
+import OptimizePanel from './OptimizePanel'
 import { cn } from '../../lib/utils'
 
 const TABS = [
-  { id: 'isochrone', label: 'Map', icon: Map },
-  { id: 'stats', label: 'Stats', icon: BarChart3 },
-  { id: 'saved', label: 'Saved', icon: Bookmark },
-  { id: 'route', label: 'Route', icon: Navigation },
+  { id: 'isochrone', label: 'Map',      icon: Map },
+  { id: 'stats',     label: 'Stats',    icon: BarChart3 },
+  { id: 'matrix',    label: 'Matrix',   icon: Grid3x3 },
+  { id: 'poi',       label: 'POI',      icon: Star },
+  { id: 'optimize',  label: 'Optimize', icon: Route },
+  { id: 'route',     label: 'Route',    icon: Navigation },
+  { id: 'saved',     label: 'Saved',    icon: Bookmark },
 ]
 
 export default function SidePanel() {
@@ -30,9 +36,6 @@ export default function SidePanel() {
         />
       )}
 
-      {/* Sidebar
-          Mobile:  fixed overlay, slides in/out via translate
-          Desktop: in-flow, always visible, no toggle needed           */}
       <aside
         className={cn(
           'fixed md:relative z-30 md:z-auto',
@@ -56,7 +59,6 @@ export default function SidePanel() {
                 Where can you reach in X minutes?
               </p>
             </div>
-            {/* Close — mobile only */}
             <button
               onClick={() => setSidebarOpen(false)}
               className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -67,14 +69,14 @@ export default function SidePanel() {
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div className="shrink-0 flex border-b border-white/5">
+        {/* Tab bar — scrollable on small widths */}
+        <div className="shrink-0 flex overflow-x-auto border-b border-white/5 scrollbar-none">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
               className={cn(
-                'flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors',
+                'flex-none flex flex-col items-center gap-0.5 px-3 py-2.5 text-[9px] font-medium transition-colors',
                 activeTab === id
                   ? 'text-blue-400 border-b-2 border-blue-500'
                   : 'text-slate-500 hover:text-slate-300'
@@ -102,9 +104,12 @@ export default function SidePanel() {
               </div>
             </>
           )}
-          {activeTab === 'stats' && <StatsPanel />}
-          {activeTab === 'saved' && <SavedPlaces />}
-          {activeTab === 'route' && <RouteDetails />}
+          {activeTab === 'stats'    && <StatsPanel />}
+          {activeTab === 'matrix'   && <MatrixPanel />}
+          {activeTab === 'poi'      && <POIPanel />}
+          {activeTab === 'optimize' && <OptimizePanel />}
+          {activeTab === 'route'    && <RouteDetails />}
+          {activeTab === 'saved'    && <SavedPlaces />}
         </div>
       </aside>
     </>

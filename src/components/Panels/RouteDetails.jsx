@@ -1,9 +1,16 @@
 import { useIsochroneStore } from '../../store/isochroneStore'
 import { formatDistance, formatSeconds } from '../../utils/geospatial'
 import { Navigation, X } from 'lucide-react'
+import ElevationProfile from './ElevationProfile'
 
 export default function RouteDetails() {
-  const { routeData, setRouteData, setRouteDestination } = useIsochroneStore()
+  const { routeData, setRouteData, setRouteDestination, setElevationData } = useIsochroneStore()
+
+  const clearRoute = () => {
+    setRouteData(null)
+    setRouteDestination(null)
+    setElevationData(null)
+  }
 
   if (!routeData) {
     return (
@@ -34,9 +41,12 @@ export default function RouteDetails() {
         </div>
       )}
 
+      {/* Elevation profile (auto-loads when routeData is set + ORS key present) */}
+      <ElevationProfile />
+
       {/* Clear button */}
       <button
-        onClick={() => { setRouteData(null); setRouteDestination(null) }}
+        onClick={clearRoute}
         className="w-full flex items-center justify-center gap-2 py-2 text-xs text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10"
       >
         <X className="w-3.5 h-3.5" />
@@ -44,7 +54,7 @@ export default function RouteDetails() {
       </button>
 
       {/* Turn-by-turn steps */}
-      <div className="space-y-1 max-h-60 overflow-y-auto custom-scroll pr-1">
+      <div className="space-y-1 max-h-52 overflow-y-auto custom-scroll pr-1">
         {steps.map((step, i) => (
           <div key={i} className="flex items-start gap-2 py-2 border-b border-white/5 last:border-0">
             <span className="text-xs text-slate-500 w-5 shrink-0 mt-0.5">{i + 1}</span>

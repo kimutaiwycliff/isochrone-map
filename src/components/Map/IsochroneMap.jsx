@@ -5,16 +5,15 @@ import { useIsochrone } from '../../hooks/useIsochrone'
 import IsochroneLayer from './IsochroneLayer'
 import OriginMarker from './OriginMarker'
 import RouteLayer from './RouteLayer'
+import POILayer from './POILayer'
+import WaypointMarker from './WaypointMarker'
+import OptimizeRouteLayer from './OptimizeRouteLayer'
 import { uniqueId } from '../../utils/geospatial'
 import { fetchReverseGeocode } from '../../utils/ors'
 import { ORIGIN_COLORS } from '../../utils/colors'
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
-/**
- * Renders null — one per origin. Calls useIsochrone for that specific origin
- * and re-fetches whenever the fetch key changes. A ref guards against duplicate calls.
- */
 function OriginFetcher({ origin }) {
   const { mutate } = useIsochrone(origin.id)
   const profile = useIsochroneStore((s) => s.profile)
@@ -39,10 +38,19 @@ export default function IsochroneMap() {
     zoom: 11,
   })
   const mapRef = useRef(null)
-  const { origins, isochroneData, routeData, addOrigin, flyToTarget, setFlyToTarget } =
-    useIsochroneStore()
+  const {
+    origins,
+    isochroneData,
+    routeData,
+    addOrigin,
+    flyToTarget,
+    setFlyToTarget,
+    mapMode,
+    waypoints,
+    addWaypoint,
+  } = useIsochroneStore()
 
-  // ── Fly to location when store target changes (set by SearchBox) ──────────
+  // ── Fly to location when SearchBox sets a target ──────────────────────────
   useEffect(() => {
     if (!flyToTarget || !mapRef.current) return
     mapRef.current.flyTo({
@@ -50,31 +58,40 @@ export default function IsochroneMap() {
       zoom: flyToTarget.zoom ?? 13,
       duration: 1200,
     })
-    setFlyToTarget(null) // consume
+    setFlyToTarget(null)
   }, [flyToTarget, setFlyToTarget])
 
-  // ── Click on map → add origin with Nominatim reverse geocode label ────────
+  // ── Map click: add isochrone origin OR optimization waypoint ──────────────
   const handleMapClick = useCallback(
     async (e) => {
-      if (origins.length >= 3) return
       const { lng, lat } = e.lngLat
+
+      if (mapMode === 'optimize') {
+        // Waypoint mode
+        const id = uniqueId()
+        const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+        addWaypoint({ id, lat, lng, label: coordLabel })
+        fetchReverseGeocode(lat, lng).then((label) => {
+          if (label) useIsochroneStore.getState().updateWaypoint?.(id, { label })
+        })
+        return
+      }
+
+      // Isochrone mode
+      if (origins.length >= 3) return
       const id = uniqueId()
-      const colorIndex = origins.length
-      const color = ORIGIN_COLORS[colorIndex % ORIGIN_COLORS.length]
-
-      // Optimistic: add immediately with coordinates as label
-      const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-      addOrigin({ id, lat, lng, label: coordLabel, color: color.scheme })
-
-      // Then silently upgrade label with reverse geocode
+      const color = ORIGIN_COLORS[origins.length % ORIGIN_COLORS.length]
+      addOrigin({ id, lat, lng, label: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, color: color.scheme })
       fetchReverseGeocode(lat, lng).then((label) => {
-        if (label) {
-          useIsochroneStore.getState().updateOrigin(id, { label })
-        }
+        if (label) useIsochroneStore.getState().updateOrigin(id, { label })
       })
     },
-    [origins.length, addOrigin]
+    [mapMode, origins.length, addOrigin, addWaypoint]
   )
+
+  const cursor = mapMode === 'optimize'
+    ? 'crosshair'
+    : origins.length < 3 ? 'crosshair' : 'default'
 
   return (
     <Map
@@ -85,12 +102,12 @@ export default function IsochroneMap() {
       style={{ width: '100%', height: '100%' }}
       mapStyle={MAP_STYLE}
       attributionControl={false}
-      cursor={origins.length < 3 ? 'crosshair' : 'default'}
+      cursor={cursor}
     >
       <NavigationControl position="bottom-right" />
       <ScaleControl position="bottom-left" />
 
-      {/* Auto-fetch isochrones for each origin — each gets its own hook instance */}
+      {/* Fetch isochrone per origin */}
       {origins.map((origin) => (
         <OriginFetcher key={origin.id} origin={origin} />
       ))}
@@ -98,9 +115,7 @@ export default function IsochroneMap() {
       {/* Isochrone fill + outline layers */}
       {origins.map((origin) => {
         const data = isochroneData[origin.id]
-        return data ? (
-          <IsochroneLayer key={origin.id} origin={origin} data={data} />
-        ) : null
+        return data ? <IsochroneLayer key={origin.id} origin={origin} data={data} /> : null
       })}
 
       {/* Draggable origin markers */}
@@ -108,8 +123,15 @@ export default function IsochroneMap() {
         <OriginMarker key={origin.id} origin={origin} />
       ))}
 
-      {/* Route geometry */}
+      {/* Directions route */}
       {routeData && <RouteLayer data={routeData} />}
+
+      {/* POI markers */}
+      <POILayer />
+
+      {/* Optimization waypoints + route */}
+      <WaypointMarker />
+      <OptimizeRouteLayer />
     </Map>
   )
 }
