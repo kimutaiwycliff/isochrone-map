@@ -12,7 +12,12 @@ import { uniqueId } from '../../utils/geospatial'
 import { fetchReverseGeocode } from '../../utils/ors'
 import { ORIGIN_COLORS } from '../../utils/colors'
 
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+const MAP_STYLES = {
+  dark:      'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  light:     'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  voyager:   'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  satellite: 'https://api.maptiler.com/maps/satellite/style.json?key=get_your_own_key',
+}
 
 function OriginFetcher({ origin }) {
   const { mutate } = useIsochrone(origin.id)
@@ -42,15 +47,25 @@ export default function IsochroneMap() {
     origins,
     isochroneData,
     routeData,
+    routeAlternatives,
     addOrigin,
     flyToTarget,
     setFlyToTarget,
     mapMode,
+    setMapMode,
+    mapStyle,
     waypoints,
     addWaypoint,
+    // Directions mode
+    directionsClickTarget,
+    setDirectionsClickTarget,
+    routeWaypoints,
+    addRouteWaypoint,
+    updateRouteWaypoint,
+    setRouteWaypoints,
   } = useIsochroneStore()
 
-  // ── Fly to location when SearchBox sets a target ──────────────────────────
+  // ── Fly to location when SearchBox or Directions panel sets a target ───────
   useEffect(() => {
     if (!flyToTarget || !mapRef.current) return
     mapRef.current.flyTo({
@@ -61,13 +76,51 @@ export default function IsochroneMap() {
     setFlyToTarget(null)
   }, [flyToTarget, setFlyToTarget])
 
-  // ── Map click: add isochrone origin OR optimization waypoint ──────────────
+  // ── Map click handler ──────────────────────────────────────────────────────
   const handleMapClick = useCallback(
     async (e) => {
       const { lng, lat } = e.lngLat
 
+      // ── Directions mode: set clicked point as from/to/via ─────────────────
+      if (mapMode === 'directions' && directionsClickTarget) {
+        const label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+
+        const applyLabel = async (id) => {
+          const name = await fetchReverseGeocode(lat, lng)
+          if (name) updateRouteWaypoint(id, { label: name })
+        }
+
+        if (directionsClickTarget === 'from') {
+          if (routeWaypoints.length === 0) {
+            const id = uniqueId()
+            addRouteWaypoint({ id, role: 'from', lat, lng, label })
+            applyLabel(id)
+          } else {
+            updateRouteWaypoint(routeWaypoints[0].id, { lat, lng, label })
+            applyLabel(routeWaypoints[0].id)
+          }
+        } else if (directionsClickTarget === 'to') {
+          if (routeWaypoints.length <= 1) {
+            const id = uniqueId()
+            addRouteWaypoint({ id, role: 'to', lat, lng, label })
+            applyLabel(id)
+          } else {
+            const last = routeWaypoints[routeWaypoints.length - 1]
+            updateRouteWaypoint(last.id, { lat, lng, label })
+            applyLabel(last.id)
+          }
+        } else {
+          // Via point id
+          updateRouteWaypoint(directionsClickTarget, { lat, lng, label })
+          applyLabel(directionsClickTarget)
+        }
+
+        setDirectionsClickTarget(null)
+        return
+      }
+
+      // ── Optimize mode ─────────────────────────────────────────────────────
       if (mapMode === 'optimize') {
-        // Waypoint mode
         const id = uniqueId()
         const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
         addWaypoint({ id, lat, lng, label: coordLabel })
@@ -77,7 +130,7 @@ export default function IsochroneMap() {
         return
       }
 
-      // Isochrone mode
+      // ── Isochrone mode ────────────────────────────────────────────────────
       if (origins.length >= 3) return
       const id = uniqueId()
       const color = ORIGIN_COLORS[origins.length % ORIGIN_COLORS.length]
@@ -86,12 +139,23 @@ export default function IsochroneMap() {
         if (label) useIsochroneStore.getState().updateOrigin(id, { label })
       })
     },
-    [mapMode, origins.length, addOrigin, addWaypoint]
+    [
+      mapMode, directionsClickTarget, origins.length,
+      routeWaypoints, addOrigin, addWaypoint,
+      addRouteWaypoint, updateRouteWaypoint, setDirectionsClickTarget,
+    ]
   )
 
-  const cursor = mapMode === 'optimize'
-    ? 'crosshair'
-    : origins.length < 3 ? 'crosshair' : 'default'
+  // ── Cursor style ───────────────────────────────────────────────────────────
+  const cursor =
+    (mapMode === 'directions' && directionsClickTarget) ||
+    mapMode === 'optimize' ||
+    (mapMode === 'isochrone' && origins.length < 3)
+      ? 'crosshair'
+      : 'default'
+
+  // ── Map style URL ──────────────────────────────────────────────────────────
+  const styleUrl = MAP_STYLES[mapStyle] ?? MAP_STYLES.dark
 
   return (
     <Map
@@ -100,7 +164,7 @@ export default function IsochroneMap() {
       onMove={(e) => setViewState(e.viewState)}
       onClick={handleMapClick}
       style={{ width: '100%', height: '100%' }}
-      mapStyle={MAP_STYLE}
+      mapStyle={styleUrl}
       attributionControl={false}
       cursor={cursor}
     >
@@ -123,8 +187,8 @@ export default function IsochroneMap() {
         <OriginMarker key={origin.id} origin={origin} />
       ))}
 
-      {/* Directions route */}
-      {routeData && <RouteLayer data={routeData} />}
+      {/* Directions / legacy route */}
+      <RouteLayer data={routeData} />
 
       {/* POI markers */}
       <POILayer />

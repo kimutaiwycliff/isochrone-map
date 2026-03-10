@@ -42,11 +42,52 @@ export async function fetchIsochrone({ lat, lng, profile, ranges }) {
 
 // ─── 2. Directions / Routing ─────────────────────────────────────────────────
 
-export async function fetchDirections({ profile, start, end }) {
-  return orsGet(`/v2/directions/${profile}`, {
-    start: `${start.lng},${start.lat}`,
-    end: `${end.lng},${end.lat}`,
-  })
+/**
+ * waypoints: [{ lat, lng }, ...]  — at least 2 required (from → [via…] → to)
+ * profile: ORS profile string
+ * preference: 'recommended' | 'fastest' | 'shortest'
+ * avoidFeatures: string[] — e.g. ['tolls', 'highways', 'ferries']
+ * alternatives: number — how many alternatives to request (1 = no alternatives)
+ * Returns GeoJSON FeatureCollection (each feature = one route)
+ */
+export async function fetchDirections({
+  profile,
+  waypoints,
+  preference = 'recommended',
+  avoidFeatures = [],
+  alternatives = 1,
+  // legacy support
+  start,
+  end,
+}) {
+  // Normalise: accept either waypoints[] or legacy {start, end}
+  const coords =
+    waypoints && waypoints.length >= 2
+      ? waypoints.map((w) => [w.lng, w.lat])
+      : [[start.lng, start.lat], [end.lng, end.lat]]
+
+  const body = {
+    coordinates: coords,
+    preference,
+    instructions: true,
+    elevation: true,
+    units: 'km',
+    extra_info: ['steepness', 'surface', 'waytype'],
+  }
+
+  if (avoidFeatures.length > 0) {
+    body.options = { avoid_features: avoidFeatures }
+  }
+
+  if (alternatives > 1) {
+    body.alternative_routes = {
+      target_count: Math.min(alternatives, 3),
+      weight_factor: 1.6,
+      share_factor: 0.6,
+    }
+  }
+
+  return orsPost(`/v2/directions/${profile}/geojson`, body)
 }
 
 // ─── 3. Matrix (travel-time / distance table) ────────────────────────────────

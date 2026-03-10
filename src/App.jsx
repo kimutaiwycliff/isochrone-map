@@ -9,9 +9,8 @@ export default function App() {
   const { sidebarOpen, setSidebarOpen } = useIsochroneStore()
 
   return (
-    /* flex-row: sidebar left, map fills the rest */
-    <div className="flex h-screen w-screen bg-[#0f1117] overflow-hidden">
-      {/* Sidebar — drawer on mobile, in-flow on md+ */}
+    <div className="flex h-dvh w-screen bg-[#0f1117] overflow-hidden">
+      {/* Sidebar — slide-in drawer on mobile, always-visible on md+ */}
       <SidePanel />
 
       {/* Map fills all remaining space */}
@@ -20,20 +19,20 @@ export default function App() {
         <LoadingOverlay />
         <Toast />
 
-        {/* Mobile "open panel" button — only when drawer is closed */}
+        {/* Mobile open-panel FAB — shown only when drawer is closed */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden absolute top-4 left-4 z-10 flex items-center gap-2 bg-[#1e2537]/90 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-xl text-white text-sm font-medium"
-            aria-label="Open controls"
+            className="md:hidden absolute top-safe-top left-4 mt-3 z-10 flex items-center gap-2 bg-[#1e2537]/95 backdrop-blur-md border border-white/15 rounded-2xl px-3.5 py-2.5 shadow-2xl shadow-black/40 text-white text-sm font-semibold active:scale-95 transition-transform"
+            aria-label="Open navigation panel"
           >
-            <Menu className="w-4 h-4" />
-            <span>Controls</span>
+            <Menu className="w-4 h-4 text-blue-400" />
+            <span>Explore</span>
           </button>
         )}
 
-        {/* Attribution */}
-        <div className="absolute bottom-2 right-14 text-[10px] text-slate-600 pointer-events-none select-none">
+        {/* Attribution — bottom-right, hidden on very small screens */}
+        <div className="absolute bottom-6 right-14 hidden sm:block text-[10px] text-slate-600 pointer-events-none select-none">
           &copy;{' '}
           <a
             href="https://openrouteservice.org"

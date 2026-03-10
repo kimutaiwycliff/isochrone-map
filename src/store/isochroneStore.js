@@ -36,12 +36,72 @@ export const useIsochroneStore = create(
         }),
 
       // ── Directions / Route ─────────────────────────────────────────────────
+      // Legacy isochrone-triggered route (kept for backwards compat)
       routeData: null,
       setRouteData: (data) => set({ routeData: data }),
       routeOriginId: null,
       setRouteOriginId: (id) => set({ routeOriginId: id }),
       routeDestination: null,
       setRouteDestination: (dest) => set({ routeDestination: dest }),
+
+      // ── Standalone Directions mode ─────────────────────────────────────────
+      // routeWaypoints: ordered array of { id, lat, lng, label, role: 'from'|'via'|'to' }
+      routeWaypoints: [],
+      setRouteWaypoints: (wps) => set({ routeWaypoints: wps }),
+      addRouteWaypoint: (wp) =>
+        set((s) => ({ routeWaypoints: [...s.routeWaypoints, wp] })),
+      updateRouteWaypoint: (id, updates) =>
+        set((s) => ({
+          routeWaypoints: s.routeWaypoints.map((w) =>
+            w.id === id ? { ...w, ...updates } : w
+          ),
+        })),
+      removeRouteWaypoint: (id) =>
+        set((s) => ({
+          routeWaypoints: s.routeWaypoints.filter((w) => w.id !== id),
+        })),
+      swapRouteEndpoints: () =>
+        set((s) => {
+          const wps = [...s.routeWaypoints]
+          if (wps.length < 2) return {}
+          const first = { ...wps[0], role: 'from' }
+          const last = { ...wps[wps.length - 1], role: 'to' }
+          wps[0] = { ...last, role: 'from' }
+          wps[wps.length - 1] = { ...first, role: 'to' }
+          return { routeWaypoints: wps }
+        }),
+
+      // Profile separate from isochrone profile
+      routeProfile: 'driving-car',
+      setRouteProfile: (p) => set({ routeProfile: p }),
+
+      routePreference: 'recommended',
+      setRoutePreference: (p) => set({ routePreference: p }),
+
+      avoidFeatures: [],
+      setAvoidFeatures: (feats) => set({ avoidFeatures: feats }),
+      toggleAvoidFeature: (feat) =>
+        set((s) => ({
+          avoidFeatures: s.avoidFeatures.includes(feat)
+            ? s.avoidFeatures.filter((f) => f !== feat)
+            : [...s.avoidFeatures, feat],
+        })),
+
+      // Number of alternatives to request (1 = just best route)
+      routeAlternativeCount: 2,
+      setRouteAlternativeCount: (n) => set({ routeAlternativeCount: n }),
+
+      // All returned route features (GeoJSON features array)
+      routeAlternatives: [],
+      setRouteAlternatives: (routes) => set({ routeAlternatives: routes }),
+
+      // Which alternative is active (0 = first/best)
+      activeRouteIdx: 0,
+      setActiveRouteIdx: (i) => set({ activeRouteIdx: i }),
+
+      // Directions "pick on map" target: null | 'from' | 'to' | index (via)
+      directionsClickTarget: null,
+      setDirectionsClickTarget: (t) => set({ directionsClickTarget: t }),
 
       // ── Matrix ────────────────────────────────────────────────────────────
       matrixData: null,
@@ -78,15 +138,19 @@ export const useIsochroneStore = create(
         set((s) => ({ savedPlaces: s.savedPlaces.filter((p) => p.id !== id) })),
 
       // ── UI ────────────────────────────────────────────────────────────────
-      activeTab: 'isochrone',
+      activeTab: 'directions',
       setActiveTab: (tab) => set({ activeTab: tab }),
       sidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
       setSidebarOpen: (v) => set({ sidebarOpen: v }),
       flyToTarget: null,
       setFlyToTarget: (target) => set({ flyToTarget: target }),
-      // Map interaction mode: 'isochrone' | 'optimize'
-      mapMode: 'isochrone',
+      // Map interaction mode: 'isochrone' | 'optimize' | 'directions'
+      mapMode: 'directions',
       setMapMode: (mode) => set({ mapMode: mode }),
+
+      // Active map style key
+      mapStyle: 'dark',
+      setMapStyle: (style) => set({ mapStyle: style }),
       toast: null,
       showToast: (msg, type = 'info') => set({ toast: { msg, type, id: Date.now() } }),
       clearToast: () => set({ toast: null }),

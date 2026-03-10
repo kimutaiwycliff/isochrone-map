@@ -37,7 +37,7 @@ export default function OriginList() {
                 showToast('Place saved!', 'success')
               }}
               title="Save place"
-              className="p-1 text-slate-500 hover:text-amber-400 transition-colors"
+              className="p-2 text-slate-500 hover:text-amber-400 active:text-amber-300 transition-colors touch-target"
             >
               <Bookmark className="w-3.5 h-3.5" />
             </button>
@@ -47,7 +47,7 @@ export default function OriginList() {
                 removeIsochroneData(origin.id)
               }}
               title="Remove origin"
-              className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+              className="p-2 text-slate-500 hover:text-red-400 active:text-red-300 transition-colors touch-target"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
