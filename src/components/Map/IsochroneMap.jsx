@@ -6,15 +6,14 @@ import IsochroneLayer from './IsochroneLayer'
 import OriginMarker from './OriginMarker'
 import RouteLayer from './RouteLayer'
 import { uniqueId } from '../../utils/geospatial'
-import { fetchGeocode } from '../../utils/ors'
+import { fetchReverseGeocode } from '../../utils/ors'
 import { ORIGIN_COLORS } from '../../utils/colors'
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
 
 /**
  * Renders null — one per origin. Calls useIsochrone for that specific origin
- * and re-fetches whenever the fetch key changes (profile, timeRanges, multiInterval,
- * or the origin coordinates). A ref guards against duplicate calls for the same key.
+ * and re-fetches whenever the fetch key changes. A ref guards against duplicate calls.
  */
 function OriginFetcher({ origin }) {
   const { mutate } = useIsochrone(origin.id)
@@ -40,8 +39,21 @@ export default function IsochroneMap() {
     zoom: 11,
   })
   const mapRef = useRef(null)
-  const { origins, isochroneData, routeData, addOrigin } = useIsochroneStore()
+  const { origins, isochroneData, routeData, addOrigin, flyToTarget, setFlyToTarget } =
+    useIsochroneStore()
 
+  // ── Fly to location when store target changes (set by SearchBox) ──────────
+  useEffect(() => {
+    if (!flyToTarget || !mapRef.current) return
+    mapRef.current.flyTo({
+      center: [flyToTarget.lng, flyToTarget.lat],
+      zoom: flyToTarget.zoom ?? 13,
+      duration: 1200,
+    })
+    setFlyToTarget(null) // consume
+  }, [flyToTarget, setFlyToTarget])
+
+  // ── Click on map → add origin with Nominatim reverse geocode label ────────
   const handleMapClick = useCallback(
     async (e) => {
       if (origins.length >= 3) return
@@ -50,17 +62,16 @@ export default function IsochroneMap() {
       const colorIndex = origins.length
       const color = ORIGIN_COLORS[colorIndex % ORIGIN_COLORS.length]
 
-      let label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-      try {
-        const geo = await fetchGeocode(`${lat},${lng}`, 1)
-        if (geo?.features?.[0]?.properties?.label) {
-          label = geo.features[0].properties.label
-        }
-      } catch {
-        // keep coordinate-based label as fallback
-      }
+      // Optimistic: add immediately with coordinates as label
+      const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      addOrigin({ id, lat, lng, label: coordLabel, color: color.scheme })
 
-      addOrigin({ id, lat, lng, label, color: color.scheme })
+      // Then silently upgrade label with reverse geocode
+      fetchReverseGeocode(lat, lng).then((label) => {
+        if (label) {
+          useIsochroneStore.getState().updateOrigin(id, { label })
+        }
+      })
     },
     [origins.length, addOrigin]
   )

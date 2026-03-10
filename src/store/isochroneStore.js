@@ -56,6 +56,9 @@ export const useIsochroneStore = create(
       // Open by default on desktop, closed on mobile
       sidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
       setSidebarOpen: (v) => set({ sidebarOpen: v }),
+      // Instruct the map to fly to a location; cleared once consumed
+      flyToTarget: null,
+      setFlyToTarget: (target) => set({ flyToTarget: target }),
       toast: null,
       showToast: (msg, type = 'info') => set({ toast: { msg, type, id: Date.now() } }),
       clearToast: () => set({ toast: null }),
