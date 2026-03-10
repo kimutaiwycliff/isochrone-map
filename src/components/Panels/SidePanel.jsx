@@ -1,4 +1,4 @@
-import { Map, BarChart3, Bookmark, Navigation, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Map, BarChart3, Bookmark, Navigation, X } from 'lucide-react'
 import { useIsochroneStore } from '../../store/isochroneStore'
 import SearchBox from '../Controls/SearchBox'
 import ModeSelector from '../Controls/ModeSelector'
@@ -22,36 +22,49 @@ export default function SidePanel() {
 
   return (
     <>
-      {/* Mobile toggle button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className={cn(
-          'absolute z-20 top-4 transition-all duration-300 bg-[#1e2537] border border-white/10 rounded-full p-2 shadow-xl md:hidden',
-          sidebarOpen ? 'left-[calc(100vw-3rem)]' : 'left-4'
-        )}
-      >
-        {sidebarOpen ? (
-          <ChevronLeft className="w-4 h-4 text-white" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-white" />
-        )}
-      </button>
+      {/* Mobile backdrop — closes drawer on tap outside */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
+      {/* Sidebar
+          Mobile:  fixed overlay, slides in/out via translate
+          Desktop: in-flow, always visible, no toggle needed           */}
       <aside
         className={cn(
-          'absolute md:relative z-10 top-0 left-0 h-full flex flex-col bg-[#161b26] border-r border-white/5 transition-all duration-300 overflow-hidden',
-          sidebarOpen ? 'w-[min(85vw,360px)]' : 'w-0 md:w-0'
+          'fixed md:relative z-30 md:z-auto',
+          'top-0 left-0 h-full',
+          'w-[min(85vw,320px)] md:w-[360px] shrink-0',
+          'transition-transform duration-300 ease-in-out',
+          'md:translate-x-0',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          'flex flex-col bg-[#161b26] border-r border-white/5 overflow-hidden'
         )}
       >
         {/* Header */}
         <div className="shrink-0 p-4 border-b border-white/5">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
               <Map className="w-4 h-4 text-white" />
             </div>
-            <h1 className="font-bold text-white text-base">Isochrone Map</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-bold text-white text-sm leading-tight">Isochrone Map</h1>
+              <p className="text-[11px] text-slate-500 leading-tight truncate">
+                Where can you reach in X minutes?
+              </p>
+            </div>
+            {/* Close — mobile only */}
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Close panel"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <p className="text-xs text-slate-500">Where can you reach in X minutes?</p>
         </div>
 
         {/* Tab bar */}
@@ -82,7 +95,9 @@ export default function SidePanel() {
               <TimeSlider />
               <MultiIntervalToggle />
               <div>
-                <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">Origins</p>
+                <p className="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">
+                  Origins
+                </p>
                 <OriginList />
               </div>
             </>

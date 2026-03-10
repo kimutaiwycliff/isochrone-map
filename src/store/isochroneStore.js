@@ -53,7 +53,8 @@ export const useIsochroneStore = create(
       // UI
       activeTab: 'isochrone',
       setActiveTab: (tab) => set({ activeTab: tab }),
-      sidebarOpen: true,
+      // Open by default on desktop, closed on mobile
+      sidebarOpen: typeof window !== 'undefined' ? window.innerWidth >= 768 : true,
       setSidebarOpen: (v) => set({ sidebarOpen: v }),
       toast: null,
       showToast: (msg, type = 'info') => set({ toast: { msg, type, id: Date.now() } }),

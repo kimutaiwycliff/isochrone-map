@@ -31,7 +31,7 @@ export default function Toast() {
   return (
     <div
       className={cn(
-        'absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border shadow-2xl text-sm font-medium backdrop-blur-sm',
+        'absolute bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border shadow-2xl text-sm font-medium backdrop-blur-sm whitespace-nowrap',
         COLORS[toast.type] || COLORS.info
       )}
     >
