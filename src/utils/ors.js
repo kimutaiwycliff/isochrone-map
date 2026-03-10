@@ -189,7 +189,9 @@ export async function fetchPOI({ geojson, categoryIds = [], limit = 200 }) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err?.error?.message || `POI error ${res.status}`)
   }
-  return res.json()
+  // ORS returns NaN in bbox when no results found — not valid JSON
+  const text = await res.text()
+  return JSON.parse(text.replace(/\bNaN\b/g, 'null'))
 }
 
 // ─── 8. Optimization (Vehicle Routing / TSP) ─────────────────────────────────
