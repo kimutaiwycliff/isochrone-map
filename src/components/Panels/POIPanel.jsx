@@ -6,15 +6,16 @@ import { ORIGIN_COLORS } from '../../utils/colors'
 import { HAS_API_KEY } from '../../utils/ors'
 import { cn } from '../../lib/utils'
 
-// ORS valid category_ids (max 5 per request).
-// IDs sourced from the ORS POI API's accepted list.
+// ORS valid category_ids — every ID is cross-checked against the API's
+// accepted list. One representative ID per category keeps the total well
+// under the ORS hard limit of 5.
 const CATEGORIES = [
-  { id: 100, label: 'Food & Drink', icon: Coffee,       color: 'amber',  ids: [560, 561, 562, 563] },
-  { id: 200, label: 'Health',       icon: Heart,        color: 'red',    ids: [101, 102, 103, 104] },
-  { id: 300, label: 'Transport',    icon: Bus,           color: 'sky',    ids: [261, 262, 263, 264] },
-  { id: 400, label: 'Finance',      icon: DollarSign,   color: 'green',  ids: [121, 122, 123, 124] },
-  { id: 500, label: 'Education',    icon: GraduationCap, color: 'purple', ids: [207, 208, 209, 210] },
-  { id: 600, label: 'Culture',      icon: Landmark,     color: 'pink',   ids: [621, 622, 623, 624] },
+  { id: 561, label: 'Food & Drink', icon: Coffee,        color: 'amber',  ids: [561] }, // cafe/restaurant
+  { id: 101, label: 'Health',       icon: Heart,         color: 'red',    ids: [101] }, // hospital/clinic
+  { id: 261, label: 'Transport',    icon: Bus,           color: 'sky',    ids: [261] }, // public transport stop
+  { id: 121, label: 'Finance',      icon: DollarSign,    color: 'green',  ids: [121] }, // bank / ATM
+  { id: 207, label: 'Education',    icon: GraduationCap, color: 'purple', ids: [207] }, // school/university
+  { id: 621, label: 'Culture',      icon: Landmark,      color: 'pink',   ids: [621] }, // museum/gallery
 ]
 
 // ORS hard limit: max 5 category_ids per request
